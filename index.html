@@ -312,17 +312,29 @@
       const chkRgpd = document.getElementById('check-rgpd');
       const btnLogin = document.getElementById('btn-login');
 
+      // Recuperamos el estado de los consentimientos si ya se aceptaron antes de redirigir
+      if(localStorage.getItem('vbt_legal_accepted') === 'true') {
+        chkLegal.checked = true;
+        chkRgpd.checked = true;
+      }
+
       function checkAuth() {
         btnLogin.disabled = !(chkLegal.checked && chkRgpd.checked);
         btnLogin.className = btnLogin.disabled ? "w-full min-h-[56px] bg-[#21262D] text-[#8C9BAE] font-black rounded-2xl cursor-not-allowed" : "w-full min-h-[56px] bg-[#00E676] text-[#0D0F12] font-black rounded-2xl cursor-pointer shadow-[0_0_20px_rgba(0,230,118,0.4)]";
       }
+      
       chkLegal.addEventListener('change', checkAuth);
       chkRgpd.addEventListener('change', checkAuth);
+      checkAuth();
 
-btnLogin.addEventListener('click', () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithRedirect(provider);
-});
+      btnLogin.addEventListener('click', () => {
+        if(chkLegal.checked && chkRgpd.checked) {
+          localStorage.setItem('vbt_legal_accepted', 'true');
+          const provider = new firebase.auth.GoogleAuthProvider();
+          auth.signInWithRedirect(provider);
+        }
+      });
+
       auth.onAuthStateChanged((user) => {
         if (user) {
           currentUser = user;
@@ -344,6 +356,12 @@ btnLogin.addEventListener('click', () => {
           }
         } else {
           currentUser = null;
+          // Si ya aceptó los términos previamente, los mantenemos marcados al reaparecer el gate
+          if(localStorage.getItem('vbt_legal_accepted') === 'true') {
+            chkLegal.checked = true;
+            chkRgpd.checked = true;
+            checkAuth();
+          }
           document.getElementById('auth-gate').classList.remove('hidden');
           document.getElementById('bottom-nav').classList.add('hidden');
         }
