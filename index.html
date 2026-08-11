@@ -319,8 +319,10 @@
       chkLegal.addEventListener('change', checkAuth);
       chkRgpd.addEventListener('change', checkAuth);
 
-      btnLogin.addEventListener('click', () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()));
-
+btnLogin.addEventListener('click', () => {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithRedirect(provider);
+});
       auth.onAuthStateChanged((user) => {
         if (user) {
           currentUser = user;
