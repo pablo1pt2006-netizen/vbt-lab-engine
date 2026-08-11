@@ -1,0 +1,21 @@
+{
+  "short_name": "VBTLab",
+  "name": "VBT Lab Engine — Fight Performance",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1256/1256650.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1256/1256650.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#0D0F12",
+  "theme_color": "#0D0F12",
+  "display": "standalone",
+  "orientation": "portrait"
+}
