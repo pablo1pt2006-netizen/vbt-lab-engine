@@ -286,10 +286,10 @@
       window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW Error:', err)));
     }
 
-    // 2. CONFIGURACIÓN FIREBASE
+  // 2. CONFIGURACIÓN FIREBASE
     const firebaseConfig = {
       apiKey: "AIzaSyAErAgOVJphBw4s5ZgLU1H9Zsfcl0dbj98",
-      authDomain: "vbtlab-engine.firebaseapp.com",
+      authDomain: "vbtlab-engine.web.app", // <--- ESTE ES EL CAMBIO CLAVE
       projectId: "vbtlab-engine",
       storageBucket: "vbtlab-engine.firebasestorage.app",
       messagingSenderId: "863283513755",
@@ -312,50 +312,48 @@
       const chkRgpd = document.getElementById('check-rgpd');
       const btnLogin = document.getElementById('btn-login');
 
-      // Recuperamos el estado de los consentimientos si ya se aceptaron antes de redirigir
-      if(localStorage.getItem('vbt_legal_accepted') === 'true') {
+      if (localStorage.getItem('vbt_legal_accepted') === 'true') {
         chkLegal.checked = true;
         chkRgpd.checked = true;
       }
 
       function checkAuth() {
-        btnLogin.disabled = !(chkLegal.checked && chkRgpd.checked);
-        btnLogin.className = btnLogin.disabled ? "w-full min-h-[56px] bg-[#21262D] text-[#8C9BAE] font-black rounded-2xl cursor-not-allowed" : "w-full min-h-[56px] bg-[#00E676] text-[#0D0F12] font-black rounded-2xl cursor-pointer shadow-[0_0_20px_rgba(0,230,118,0.4)]";
+        const isValid = chkLegal.checked && chkRgpd.checked;
+        btnLogin.disabled = !isValid;
+        btnLogin.className = isValid 
+          ? "w-full min-h-[56px] bg-[#00E676] text-[#0D0F12] font-black rounded-2xl cursor-pointer shadow-[0_0_20px_rgba(0,230,118,0.4)]" 
+          : "w-full min-h-[56px] bg-[#21262D] text-[#8C9BAE] font-black rounded-2xl cursor-not-allowed";
       }
       
       chkLegal.addEventListener('change', checkAuth);
       chkRgpd.addEventListener('change', checkAuth);
       checkAuth();
 
+      // Interceptar cualquier redirección de respaldo pendiente al cargar
+      auth.getRedirectResult().catch(error => {
+         console.error("Fallo silencioso en redirección:", error);
+      });
+
+      // Motor Híbrido: Intenta Popup, si falla, usa Redirect
       btnLogin.addEventListener('click', () => {
         if(chkLegal.checked && chkRgpd.checked) {
           localStorage.setItem('vbt_legal_accepted', 'true');
+          
+          btnLogin.innerText = "AUTENTICANDO...";
+          btnLogin.disabled = true;
+
           const provider = new firebase.auth.GoogleAuthProvider();
-          auth.signInWithRedirect(provider);
-        }
-      });
-
-      // 4. AUTH Y ONBOARDING FORZADO
-    document.addEventListener('DOMContentLoaded', () => {
-      const chkLegal = document.getElementById('check-legal');
-      const chkRgpd = document.getElementById('check-rgpd');
-      const btnLogin = document.getElementById('btn-login');
-
-      function checkAuth() {
-        btnLogin.disabled = !(chkLegal.checked && chkRgpd.checked);
-        btnLogin.className = btnLogin.disabled ? "w-full min-h-[56px] bg-[#21262D] text-[#8C9BAE] font-black rounded-2xl cursor-not-allowed" : "w-full min-h-[56px] bg-[#00E676] text-[#0D0F12] font-black rounded-2xl cursor-pointer shadow-[0_0_20px_rgba(0,230,118,0.4)]";
-      }
-      
-      chkLegal.addEventListener('change', checkAuth);
-      chkRgpd.addEventListener('change', checkAuth);
-
-      // MÉTODO POPUP ESTABLE PARA PWA
-      btnLogin.addEventListener('click', () => {
-        if(chkLegal.checked && chkRgpd.checked) {
-          const provider = new firebase.auth.GoogleAuthProvider();
+          
           auth.signInWithPopup(provider).catch((error) => {
-            console.error("Error en auth popup:", error);
-            alert("Error de autenticación. Comprueba que tu navegador no bloquee las ventanas emergentes.");
+            if (error.code === 'auth/popup-blocked' || error.code === 'auth/web-storage-unsupported') {
+              console.warn("Entorno estricto detectado. Ejecutando protocolo Redirect...");
+              auth.signInWithRedirect(provider);
+            } else {
+              console.error("Error crítico en autenticación:", error);
+              alert("Error de acceso: " + error.message);
+              btnLogin.innerText = "CONTINUAR CON GOOGLE";
+              checkAuth();
+            }
           });
         }
       });
@@ -381,6 +379,11 @@
           }
         } else {
           currentUser = null;
+          if (localStorage.getItem('vbt_legal_accepted') === 'true') {
+            chkLegal.checked = true;
+            chkRgpd.checked = true;
+            checkAuth();
+          }
           document.getElementById('auth-gate').classList.remove('hidden');
           document.getElementById('bottom-nav').classList.add('hidden');
         }
@@ -500,19 +503,16 @@
     }
 
     function obtenerEjercicioAntiMonotonia(patron, posiblesCandidatos) {
-      // Extraemos los ejercicios realizados en la sesión anterior inmediata (si existe)
       let ultimosEjerciciosAyer = [];
       if (historial.length > 0) {
-        let ultimaSesion = historial[0]; // Como está ordenado del más reciente al antiguo
+        let ultimaSesion = historial[0];
         if (ultimaSesion && ultimaSesion.ejs) {
           ultimosEjerciciosAyer = ultimaSesion.ejs.map(e => e.nombre);
         }
       }
 
-      // Filtramos candidatos que NO se hayan hecho en la última sesión para evitar repetir ejercicio exacto
       let filtrados = posiblesCandidatos.filter(ex => !ultimosEjerciciosAyer.includes(ex.E));
 
-      // Si por restricciones de lesiones o tamaño de lista nos quedamos sin opciones, fallback al pool completo
       if (filtrados.length === 0) {
         filtrados = posiblesCandidatos;
       }
@@ -799,9 +799,7 @@
       }).catch(err => {
          document.getElementById('historyList').innerHTML = `<p class="text-sm text-[#FF1744] text-center py-10 font-bold">Error de sincronización con la base de datos.</p>`;
       });
-    } // <-- Cierra cargarHistorialNube()
-
-  }); // <--- ¡ESTO ES LO QUE FALTA! Cierra el document.addEventListener('DOMContentLoaded') de la línea 310
+    }
 
     window.cerrarSesion = function() {
       if(confirm("¿Seguro que quieres cerrar sesión?")) {
@@ -813,4 +811,4 @@
     }
   </script>
 </body>
-</html> 
+</html>
