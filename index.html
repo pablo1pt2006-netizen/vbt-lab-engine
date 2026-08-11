@@ -335,6 +335,31 @@
         }
       });
 
+      // 4. AUTH Y ONBOARDING FORZADO
+    document.addEventListener('DOMContentLoaded', () => {
+      const chkLegal = document.getElementById('check-legal');
+      const chkRgpd = document.getElementById('check-rgpd');
+      const btnLogin = document.getElementById('btn-login');
+
+      function checkAuth() {
+        btnLogin.disabled = !(chkLegal.checked && chkRgpd.checked);
+        btnLogin.className = btnLogin.disabled ? "w-full min-h-[56px] bg-[#21262D] text-[#8C9BAE] font-black rounded-2xl cursor-not-allowed" : "w-full min-h-[56px] bg-[#00E676] text-[#0D0F12] font-black rounded-2xl cursor-pointer shadow-[0_0_20px_rgba(0,230,118,0.4)]";
+      }
+      
+      chkLegal.addEventListener('change', checkAuth);
+      chkRgpd.addEventListener('change', checkAuth);
+
+      // MÉTODO POPUP ESTABLE PARA PWA
+      btnLogin.addEventListener('click', () => {
+        if(chkLegal.checked && chkRgpd.checked) {
+          const provider = new firebase.auth.GoogleAuthProvider();
+          auth.signInWithPopup(provider).catch((error) => {
+            console.error("Error en auth popup:", error);
+            alert("Error de autenticación. Comprueba que tu navegador no bloquee las ventanas emergentes.");
+          });
+        }
+      });
+
       auth.onAuthStateChanged((user) => {
         if (user) {
           currentUser = user;
@@ -356,12 +381,6 @@
           }
         } else {
           currentUser = null;
-          // Si ya aceptó los términos previamente, los mantenemos marcados al reaparecer el gate
-          if(localStorage.getItem('vbt_legal_accepted') === 'true') {
-            chkLegal.checked = true;
-            chkRgpd.checked = true;
-            checkAuth();
-          }
           document.getElementById('auth-gate').classList.remove('hidden');
           document.getElementById('bottom-nav').classList.add('hidden');
         }
@@ -780,7 +799,9 @@
       }).catch(err => {
          document.getElementById('historyList').innerHTML = `<p class="text-sm text-[#FF1744] text-center py-10 font-bold">Error de sincronización con la base de datos.</p>`;
       });
-    }
+    } // <-- Cierra cargarHistorialNube()
+
+  }); // <--- ¡ESTO ES LO QUE FALTA! Cierra el document.addEventListener('DOMContentLoaded') de la línea 310
 
     window.cerrarSesion = function() {
       if(confirm("¿Seguro que quieres cerrar sesión?")) {
@@ -792,4 +813,4 @@
     }
   </script>
 </body>
-</html>
+</html> 
