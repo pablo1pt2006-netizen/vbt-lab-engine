@@ -330,15 +330,22 @@ btnLogin.addEventListener('click', () => {
           cargarHistorialNube();
           
           if (!localStorage.getItem('vbt_profile_saved')) {
-            if(!document.getElementById('usr_nombre').value) document.getElementById('usr_nombre').value = user.displayName;
+            const nombreInput = document.getElementById('usr_nombre');
+            if(nombreInput && !nombreInput.value) {
+              nombreInput.value = user.displayName || "Atleta";
+            }
             switchTab('tab-profile');
             document.getElementById('bottom-nav').classList.add('hidden');
           } else {
             document.getElementById('bottom-nav').classList.remove('hidden');
-            switchTab('tab-home');
+            if (!document.querySelector('.tab-content.active')) {
+              switchTab('tab-home');
+            }
           }
         } else {
+          currentUser = null;
           document.getElementById('auth-gate').classList.remove('hidden');
+          document.getElementById('bottom-nav').classList.add('hidden');
         }
       });
     });
